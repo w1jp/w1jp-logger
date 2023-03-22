@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <!--<?!=include()?>-->
+  </head>
+  <body>
+    <h1>CCFLARES.ORG QRZ Look Up</h1>
+    <div id="form">
+      <label for="callsign">Callsign:</label><br>
+      <input id="call" name="callsign" type="text" placeholder="W1JP" onchange="search()">
+      <br>
+      <p><button id="add" type="button" onClick="addEntry()">Add</button></p>
+      <br>
+      <label for="results">Results:</label><br>
+      <div id="results" name="results"></div>
+    </div>
+  <script>
+    const state = {}  
+  
+    function search() {
+      const call = document.getElementById('call').value;
+      // lookup call
+      document.getElementById('results').innerHTML = 'Fetching: '+call+'...'
+      google.script.run.withSuccessHandler(searchResults).qrzLookup(call);
+    }
+    
+    function searchResults(rslt) {
+      // get xmldom
+      const msg = 'searchResults: '
+      let html = ''
+      
+      google.script.run.jlog('logger: Recieved: '+JSON.stringify(rslt))
+      state.ham = rslt
+      
+      if (state.ham.callsign.call) {
+      // found
+      html = `<pre>${state.ham.callsign.call}
+${state.ham.callsign.fname} ${state.ham.callsign.name}
+${state.ham.callsign.addr1}
+${state.ham.callsign.addr2}, ${state.ham.callsign.state}</pre>`     
+      }
+      else {
+        // call not found
+        html = '<p>Callsign not found.</p>'
+      }
+      // update UI
+      document.getElementById('results').innerHTML = html;
+    }
+    
+    function addEntry() {
+      if (state.ham.session.Error) addEntryFailure({message: 'Not found'})
+      else {
+        google.script.run.withSuccessHandler(addEntrySuccess).
+                          withFailureHandler(addEntryFailure).
+                          addToSheet(state.ham.callsign)
+      }
+    }
+    
+    function addEntryFailure(res){
+      document.getElementById('results').innerHTML = '<p>Failed to write row to sheet.</p><br><pre>'+res.message+'</pre>'
+    }
+    function addEntrySuccess(res){
+      document.getElementById('results').innerHTML = '<p>Added '+state.ham.callsign.call+' to spreadsheet.</p>'
+    }
+  </script>
+  </body>
+</html>
+
+
